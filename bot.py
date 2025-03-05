@@ -67,11 +67,11 @@ def generate_unique_text(user_id):
                 user_history.setdefault(user_id, set()).add(formatted_text)
                 return formatted_text
 
-    return "Не удалось сгенерировать уникальный текст. Попробуй позже."
+    return "ку-ку. не могу уникально"
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.reply_to(message, "Пиши что хочешь, я отвечу в духе Пелевина!")
+    bot.reply_to(message, "пиши, что хочешь, я отвечу, что хочу")
 
 @bot.message_handler(func=lambda message: True)
 def send_random_text(message):
