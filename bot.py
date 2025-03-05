@@ -46,22 +46,19 @@ from threading import Thread
 TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
-# Загружаем тексты Кастанеды и Пелевина
-with open("castaneda.txt", "r", encoding="utf-8") as f:
-    castaneda_text = f.read()
-
+# Загружаем тексты Пелевина
 with open("pelevin.txt", "r", encoding="utf-8") as f:
     pelevin_text = f.read()
 
 # Создаём марковскую модель
-text_model = markovify.Text(castaneda_text + pelevin_text, state_size=2)
+text_model = markovify.Text(pelevin_text, state_size=2)
 
 # Словарь для запоминания отправленных текстов
 user_history = {}
 
 # Функция генерации уникального текста
 def generate_unique_text(user_id):
-    for _ in range(10):  # Пробуем 10 раз найти новый текст
+    for _ in range(10):  # Пробуем 3000 раз найти новый текст
         new_text = text_model.make_sentence()
         if new_text and (user_id not in user_history or new_text not in user_history[user_id]):
             user_history.setdefault(user_id, []).append(new_text)
