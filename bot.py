@@ -4,6 +4,7 @@ import os
 import telebot
 import markovify
 from collections import Counter
+import random
 
 # Инициализация Flask
 app = Flask(__name__)
@@ -27,45 +28,44 @@ with open("pelevin.txt", "r", encoding="utf-8") as f:
     pelevin_text = f.read()
 
 # Создание марковской модели
-text_model = markovify.Text(pelevin_text, state_size=2, well_formed=True)
+text_model = markovify.Text(pelevin_text, state_size=3, well_formed=True)
 
 # Словарь для хранения истории пользователей
 user_history = {}
 
-# Функция проверки и исправления текста
+# Функция проверки текста на повторы
 def filter_repetitions(text):
-    words = text.split()
+    words = text.lower().split()
     word_counts = Counter(words)
+    return None if any(count > 2 for count in word_counts.values()) else text
 
-    # Проверяем, нет ли слова, повторяющегося более 3 раз
-    for word, count in word_counts.items():
-        if count > 3:
-            return None
-    return text
-
-# Функция генерации уникального текста
+# Функция генерации связного текста из нескольких предложений
 def generate_unique_text(user_id):
     max_attempts = 3698
-    min_words = 6
+    min_words_total = 6  # Минимальное количество слов в итоговом тексте
 
     for _ in range(max_attempts):
-        # Генерируем предложение
-        new_text = text_model.make_sentence(tries=100)
+        # Генерируем 2-3 коротких предложения
+        sentences = []
+        for _ in range(random.randint(2, 3)):  # Случайно выбираем 2 или 3 предложения
+            sentence = text_model.make_short_sentence(140, tries=100)  # Ограничение длины
+            if sentence and filter_repetitions(sentence):
+                sentences.append(sentence)
 
-        if new_text and len(new_text.split()) >= min_words:
-            # Фильтруем повторы
-            filtered_text = filter_repetitions(new_text)
+        # Объединяем предложения в текст
+        if sentences:
+            combined_text = " ".join(sentences)
+            if len(combined_text.split()) >= min_words_total:
+                # Проверяем уникальность и осмысленность
+                if user_id not in user_history or combined_text not in user_history[user_id]:
+                    # Форматируем текст
+                    formatted_text = combined_text[0].upper() + combined_text[1:]
+                    if not formatted_text.endswith(('.', '!', '?')):
+                        formatted_text += '.'
 
-            if filtered_text and (user_id not in user_history or 
-                                filtered_text not in user_history[user_id]):
-                # Форматируем текст
-                formatted_text = filtered_text[0].upper() + filtered_text[1:]
-                if not formatted_text.endswith(('.', '!', '?')):
-                    formatted_text += '.'
-
-                # Сохраняем в историю
-                user_history.setdefault(user_id, set()).add(formatted_text)
-                return formatted_text
+                    # Сохраняем в историю
+                    user_history.setdefault(user_id, set()).add(formatted_text)
+                    return formatted_text
 
     return "ку-ку. не могу уникально"
 
