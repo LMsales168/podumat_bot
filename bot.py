@@ -34,7 +34,7 @@ user_history = {}
 
 # Функция генерации уникального текста
 def generate_unique_text(user_id):
-    for _ in range(10):  # Пробуем 3000 раз найти новый текст
+    for _ in range(9999):  # Пробуем 9999 раз найти новый текст
         new_text = text_model.make_sentence()
         if new_text and (user_id not in user_history or new_text not in user_history[user_id]):
             user_history.setdefault(user_id, []).append(new_text)
