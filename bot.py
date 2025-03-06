@@ -4,8 +4,6 @@ import os
 import telebot
 import markovify
 from collections import Counter
-import random
-import re
 
 # Инициализация Flask
 app = Flask(__name__)
@@ -29,65 +27,51 @@ with open("pelevin.txt", "r", encoding="utf-8") as f:
     pelevin_text = f.read()
 
 # Создание марковской модели
-text_model = markovify.Text(pelevin_text, state_size=2, well_formed=True)  # Уменьшаем state_size для большей гибкости
+text_model = markovify.Text(pelevin_text, state_size=2, well_formed=True)
 
 # Словарь для хранения истории пользователей
 user_history = {}
 
-# Функция проверки текста на повторы
+# Функция проверки и исправления текста
 def filter_repetitions(text):
-    words = text.lower().split()
+    words = text.split()
     word_counts = Counter(words)
-    return None if any(count > 2 for count in word_counts.values()) else text
 
-# Простая постобработка текста для улучшения грамматики
-def post_process_text(text):
-    # Удаляем лишние пробелы и приводим к нормальному виду
-    text = re.sub(r'\s+', ' ', text).strip()
-    
-    # Исправляем заглавную букву в начале
-    if text:
-        text = text[0].upper() + text[1:]
-    
-    # Добавляем точку, если нет завершающего знака
-    if not text.endswith(('.', '!', '?')):
-        text += '.'
-    
-    # Исправляем некоторые типичные ошибки согласования (пример для русского языка)
-    text = re.sub(r'который\s+мы', 'которого мы', text)  # Пример исправления падежа
-    text = re.sub(r'но\s+зато', 'а зато', text)  # Логическая связка
-    
+    # Проверяем, нет ли слова, повторяющегося более 3 раз
+    for word, count in word_counts.items():
+        if count > 3:
+            return None
     return text
 
-# Функция генерации связного текста из нескольких предложений
+# Функция генерации уникального текста
 def generate_unique_text(user_id):
-    max_attempts = 1000  # Уменьшаем количество попыток для скорости
-    min_words_total = 8  # Минимальное количество слов в итоговом тексте
+    max_attempts = 3698
+    min_words = 5
 
     for _ in range(max_attempts):
-        sentences = []
-        for _ in range(random.randint(1, 2)):  # Генерируем 1-2 предложения для простоты
-            sentence = text_model.make_short_sentence(100, tries=50)  # Уменьшаем длину и попытки
-            if sentence and filter_repetitions(sentence):
-                sentences.append(sentence)
+        # Генерируем предложение
+        new_text = text_model.make_sentence(tries=100)
 
-        if sentences:
-            combined_text = " ".join(sentences)
-            if len(combined_text.split()) >= min_words_total:
-                # Проверяем уникальность
-                if user_id not in user_history or combined_text not in user_history[user_id]:
-                    # Применяем постобработку
-                    formatted_text = post_process_text(combined_text)
-                    
-                    # Сохраняем в историю
-                    user_history.setdefault(user_id, set()).add(formatted_text)
-                    return formatted_text
+        if new_text and len(new_text.split()) >= min_words:
+            # Фильтруем повторы
+            filtered_text = filter_repetitions(new_text)
 
-    return "Ку-ку. Не получилось ничего путного."
+            if filtered_text and (user_id not in user_history or 
+                                filtered_text not in user_history[user_id]):
+                # Форматируем текст
+                formatted_text = filtered_text[0].upper() + filtered_text[1:]
+                if not formatted_text.endswith(('.', '!', '?')):
+                    formatted_text += '.'
+
+                # Сохраняем в историю
+                user_history.setdefault(user_id, set()).add(formatted_text)
+                return formatted_text
+
+    return "ку-ку. уникальное попозже будет"
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.reply_to(message, "Пиши что угодно, отвечу в духе Пелевина.")
+    bot.reply_to(message, "пиши, что хочешь, отвечу, что хочу")
 
 @bot.message_handler(func=lambda message: True)
 def send_random_text(message):
