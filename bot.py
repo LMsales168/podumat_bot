@@ -39,7 +39,7 @@ def filter_repetitions(text):
 
     # Проверяем, нет ли слова, повторяющегося более 3 раз
     for word, count in word_counts.items():
-        if count > 3:
+        if count > 2:
             return None
     return text
 
